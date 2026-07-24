@@ -4,11 +4,20 @@
   "version": "4.25.4",
   "description": "A basic click/type/screenshot loop agent running in-browser.",
   "permissions": [
-    "activeTab",
-    "scripting",
+    "sidePanel",
     "tabs",
-    "sidePanel"
+    "scripting",
+    "activeTab",
+    "identity",
+    "storage"
   ],
+  "oauth2": {
+    "client_id": "330231162579-bpv81fud9vbtqfh1o7ubjkd0jjg0761v.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/userinfo.profile",
+      "https://www.googleapis.com/auth/userinfo.email"
+    ]
+  },
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",
     "<all_urls>"
