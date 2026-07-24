@@ -140,25 +140,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 startButton.addEventListener("click", () => {
   const objective = objectiveInput.value.trim();
   if (!objective) return;
+  // 1. Verify user is signed in first
+  chrome.identity.getAuthToken({ interactive: false }, (token) => {
+    if (chrome.runtime.lastError || !token) {
+      // Prompt user to sign in if token isn't active
+      alert("Please sign in with Google first before starting a prompt!");
+      return;
+    }
+    // Render & save user message
+    addMessage(objective, "user");
+    saveMessageToHistory("user", objective);
 
-  // Render & save user message
-  addMessage(objective, "user");
-  saveMessageToHistory("user", objective);
+    objectiveInput.value = "";
+    objectiveInput.style.height = "40px"; // Reset height
+    
+    // Disable controls while running
+    startButton.disabled = true;
+    objectiveInput.disabled = true;
+    
+    addMessage("⚡ Initializing agent loop...", "system");
+    saveMessageToHistory("system", "⚡ Initializing agent loop...");
 
-  objectiveInput.value = "";
-  objectiveInput.style.height = "40px"; // Reset height
-  
-  // Disable controls while running
-  startButton.disabled = true;
-  objectiveInput.disabled = true;
-  
-  addMessage("⚡ Initializing agent loop...", "system");
-  saveMessageToHistory("system", "⚡ Initializing agent loop...");
-
-  // Broadcast to background.js to kick off the loop
-  chrome.runtime.sendMessage({
-    action: "start_agent_with_objective",
-    objective: objective
+    // Broadcast to background.js to kick off the loop
+    chrome.runtime.sendMessage({
+      action: "start_agent_with_objective",
+      objective: objective
+    });
   });
 });
 
