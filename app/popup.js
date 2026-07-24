@@ -2,6 +2,72 @@ const chatContainer = document.getElementById("chatContainer");
 const objectiveInput = document.getElementById("objectiveInput");
 const startButton = document.getElementById("startButton");
 const micButton = document.getElementById("micButton");
+const authButton = document.getElementById("authButton");
+const userName = document.getElementById("userName");
+const userAvatar = document.getElementById("userAvatar");
+
+let currentUser = null;
+
+// Load existing User Session & Chat History on Panel Launch
+chrome.storage.local.get(["googleUser", "chatHistory"], (data) => {
+  if (data.googleUser) {
+    updateUserUI(data.googleUser);
+  }
+  if (data.chatHistory && Array.isArray(data.chatHistory)) {
+    data.chatHistory.forEach(item => {
+      addMessage(item.text, item.sender); 
+    });
+  }
+});
+// Google Sign-In / Sign-Out Handler
+authButton.addEventListener("click", () => {
+  if (currentUser) {
+    // Sign Out
+    chrome.identity.clearAllCachedAuthTokens(() => {
+      currentUser = null;
+      chrome.storage.local.remove("googleUser");
+      updateUserUI(null);
+    });
+  } else {
+    // Sign In via Chrome Identity API
+    chrome.identity.getAuthToken({ interactive: true }, (token) => {
+      if (chrome.runtime.lastError || !token) {
+        console.error("Authentication Error:", chrome.runtime.lastError);
+        return;
+      }
+
+      // Fetch Profile Data using token
+      fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(profile => {
+        currentUser = profile;
+        chrome.storage.local.set({ googleUser: profile });
+        updateUserUI(profile);
+      })
+      .catch(err => console.error("Profile Fetch Error:", err));
+    });
+  }
+});
+
+function updateUserUI(user) {
+  currentUser = user;
+  if (user) {
+    userName.textContent = user.name || user.email;
+    if (user.picture) {
+      userAvatar.src = user.picture;
+      userAvatar.style.display = "block";
+    }
+    authButton.textContent = "Sign Out";
+    authButton.style.backgroundColor = "#ef4444";
+  } else {
+    userName.textContent = "Not signed in";
+    userAvatar.style.display = "none";
+    authButton.textContent = "Sign In";
+    authButton.style.backgroundColor = "#4f74d9";
+  }
+}
 
 // Helper to append messages to our visual chat window
 function addMessage(text, sender = "system") {
@@ -65,16 +131,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     objectiveInput.disabled = false;
   }
   if (message.action === "agent_achievement") {
-    const chatContainer = document.getElementById("chatContainer");
-    if (chatContainer) {
-      // Create a clean agent chat bubble
-      const bubble = document.createElement("div");
-      bubble.className = "message agent";
-      bubble.innerText = message.text;
-      
-      chatContainer.appendChild(bubble);
-      chatContainer.scrollTop = chatContainer.scrollHeight; // Scroll main chat to bottom
-    }
+    addMessage(message.text, "agent");
+    saveMessageToHistory("agent", message.text);
   }
 });
 
@@ -83,15 +141,19 @@ startButton.addEventListener("click", () => {
   const objective = objectiveInput.value.trim();
   if (!objective) return;
 
-  // Render user bubble
+  // Render & save user message
   addMessage(objective, "user");
+  saveMessageToHistory("user", objective);
+
   objectiveInput.value = "";
+  objectiveInput.style.height = "40px"; // Reset height
   
   // Disable controls while running
   startButton.disabled = true;
   objectiveInput.disabled = true;
   
   addMessage("⚡ Initializing agent loop...", "system");
+  saveMessageToHistory("system", "⚡ Initializing agent loop...");
 
   // Broadcast to background.js to kick off the loop
   chrome.runtime.sendMessage({
@@ -182,3 +244,16 @@ if (window.location.search.includes("requestMic=true")) {
 document.getElementById("stop-btn").addEventListener("click", () => {
   chrome.runtime.sendMessage({ action: "stop_agent" });
 });
+// Function to save chat messages to chrome local storage
+function saveMessageToHistory(sender, text) {
+  chrome.storage.local.get(["chatHistory"], (data) => {
+    const history = data.chatHistory || [];
+    history.push({
+      sender: sender,
+      text: text,
+      userEmail: currentUser ? currentUser.email : "anonymous",
+      timestamp: new Date().toISOString()
+    });
+    chrome.storage.local.set({ chatHistory: history });
+  });
+}

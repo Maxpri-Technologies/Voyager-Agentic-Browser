@@ -252,6 +252,13 @@
   </details>
 
   <!-- Scrollable chat thread -->
+  <div id="authContainer" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #1f2937; border-bottom: 1px solid #374151;">
+    <div id="userInfo" style="display: flex; align-items: center; gap: 8px;">
+      <img id="userAvatar" style="width: 24px; height: 24px; border-radius: 50%; display: none;" />
+      <span id="userName" style="font-size: 0.85rem; color: #e4e4e7;">Not signed in</span>
+    </div>
+    <button id="authButton" style="background: #4f74d9; color: #fff; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">Sign In</button>
+  </div>
   <div class="chat-container" id="chatContainer">
     <div class="message system">Sidebar connected. Enter an objective below to begin.</div>
   </div>
