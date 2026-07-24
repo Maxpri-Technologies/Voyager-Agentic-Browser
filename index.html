@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voyager — Intelligent Browser Automation</title>
+<meta name="description" content="Voyager is an AI-powered browser agent that automates repetitive web tasks in your real browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="digital-grid" aria-hidden="true"></div>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#top">
+      <span class="brand-mark">/</span>
+      <span class="brand-word">Voyager</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#how">Workflow</a>
+      <a href="#uses">Capabilities</a>
+      <a href="#trust">Security</a>
+      <a class="btn btn-primary" href="https://github.com/Maxpri-Technologies/Agentic-Browser" target="_blank" rel="noopener">d=Download Voyager</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow"><span class="eyebrow-dot"></span> System Status: Ready for Tasking</p>
+      <h1>The agentic layer<br>for your browser.</h1>
+      <p class="lede">Voyager is a browser extension that understands web interfaces. It reasons through pages, interacts with elements, and completes complex workflows on your behalf—right inside your existing browser session.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="https://github.com/Maxpri-Technologies/Agentic-Browser" target="_blank" rel="noopener">Download Voyager</a>
+        <a class="btn btn-ghost" href="#how">See the workflow</a>
+      </div>
+      <p class="hero-note">Open Source · Chrome Compatible · Human-in-the-loop Control</p>
+    </div>
+
+    <div class="hero-stage" aria-hidden="true">
+      <div class="browser-mock" id="browserMock">
+        <div class="browser-bar">
+          <div class="browser-dots"><span></span><span></span><span></span></div>
+          <div class="browser-address">
+            <span class="lock">🔒</span>
+            <span id="addressText">app.enterprise.com/workflow</span>
+          </div>
+          <div class="browser-badge" id="voyagerBadge">Agent Running</div>
+        </div>
+        <div class="browser-viewport">
+          <svg id="routeSvg" viewBox="0 0 640 380" preserveAspectRatio="none">
+            <defs>
+              <pattern id="dotPattern" width="20" height="20" patternUnits="userSpaceOnUse">
+                <circle cx="2" cy="2" r="1" fill="rgba(255,255,255,0.05)"/>
+              </pattern>
+            </defs>
+            <rect width="640" height="380" fill="url(#dotPattern)"/>
+
+            <!-- Task Elements -->
+            <g class="mock-field" data-step="0">
+              <rect x="60" y="54" width="220" height="12" rx="2" fill="rgba(255,255,255,0.08)"/>
+              <rect x="60" y="80" width="300" height="32" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+            </g>
+
+            <g class="mock-field" data-step="1">
+              <rect x="60" y="140" width="150" height="12" rx="2" fill="rgba(255,255,255,0.08)"/>
+              <rect x="60" y="166" width="300" height="32" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+            </g>
+
+            <!-- Execution Path -->
+            <path id="routePath" d="M 40 20 L 100 96 L 150 182 L 300 320"
+                  fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="4 4" opacity="0.6"/>
+
+            <!-- The cursor/ agent focus -->
+            <g id="cursor" transform="translate(40,20)">
+              <circle r="12" fill="rgba(59, 130, 246, 0.2)"/>
+              <circle r="3" fill="#3b82f6"/>
+            </g>
+          </svg>
+        </div>
+        <div class="browser-status">
+          <span id="statusText">Processing DOM structure...</span>
+          <span class="status-id">STEP_02_EXECUTION</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACTIVITY LOG -->
+  <section class="log-strip">
+    <div class="log-inner">
+      <p class="log-title">Execution Log</p>
+      <div class="log-line"><span class="log-time">14:00:01</span> Parsed 12 semantic elements</div>
+      <div class="log-line"><span class="log-time">14:00:03</span> Input: user_auth_token into [field:email]</div>
+      <div class="log-line"><span class="log-time">14:00:05</span> Decision: Select [action:express_checkout]</div>
+      <div class="log-line"><span class="log-time">14:00:07</span> Awaiting user verification for [action:submit]</div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="section" id="what">
+    <div class="section-inner">
+      <h2>Advanced Browser Agency</h2>
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-icon">01</div>
+          <h3>Context Aware</h3>
+          <p>Voyager doesn't just "scrape"—it interprets the live DOM and accessibility tree to understand the purpose of every button and field in real-time.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">02</div>
+          <h3>Native Interaction</h3>
+          <p>The agent operates within your actual browser profile, utilizing your active sessions, cookies, and authentication to perform tasks without API overhead.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">03</div>
+          <h3>Traceable Reasoning</h3>
+          <p>Every decision is logged in human-readable steps. You see what the agent sees, why it's clicking, and where it's going next.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WORKFLOW -->
+  <section class="section" id="how">
+    <div class="section-inner">
+      <h2>The Execution Workflow</h2>
+      <p class="section-lede">Voyager transforms natural language instructions into a sequence of precise browser interactions.</p>
+
+      <div class="workflow-steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div class="step-content">
+            <h3>Instruction</h3>
+            <p>Define your goal in plain text. Voyager analyzes the request and maps it against the current page's capabilities.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div class="step-content">
+            <h3>Reasoning</h3>
+            <p>The agent surveys the interface, identifies required inputs, and plans a multi-step path to achieve the objective.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div class="step-content">
+            <h3>Validation</h3>
+            <p>For sensitive actions—like payments or data deletion—Voyager pauses and requests your explicit confirmation before proceeding.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">04</div>
+          <div class="step-content">
+            <h3>Completion</h3>
+            <p>Once the task is finished, Voyager provides a full summary of the actions taken and the final state of the page.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- USE CASES -->
+  <section class="section" id="uses">
+    <div class="section-inner">
+      <h2>Operational Capabilities</h2>
+      <div class="grid-3">
+        <div class="use-card">
+          <h3>Data Orchestration</h3>
+          <p>Sync data between internal dashboards and third-party tools that lack native integrations.</p>
+        </div>
+        <div class="use-card">
+          <h3>Complex Research</h3>
+          <p>Extract and synthesize information across multiple tabs into a single structured report.</p>
+        </div>
+        <div class="use-card">
+          <h3>Process Automation</h3>
+          <p>Automate repetitive administrative tasks, form submissions, and multi-step procurement workflows.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST -->
+  <section class="section trust-section" id="trust">
+    <div class="section-inner">
+      <h2>Safety & Privacy</h2>
+      <div class="trust-grid">
+        <div class="trust-item">
+          <strong>Local Execution</strong>
+          <p>All page processing happens on your machine. Your sensitive browsing data never leaves your environment.</p>
+        </div>
+        <div class="trust-item">
+          <strong>Human-in-the-Loop</strong>
+          <p>You remain in control. The agent acts as a co-pilot, not an unsupervised script.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="cta-inner">
+      <h2>Automate your workflow.</h2>
+      <p class="lede">Start deploying Voyager today and reclaim your focus from repetitive web tasks.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="https://github.com/Maxpri-Technologies/Agentic-Browser" target="_blank" rel="noopener">Get Started on GitHub</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="brand">
+      <span class="brand-mark">/</span>
+      <span>Voyager</span>
+    </div>
+    <p class="footer-note">A project by <a href="https://maxpritech.com">Maxpri Technologies</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
