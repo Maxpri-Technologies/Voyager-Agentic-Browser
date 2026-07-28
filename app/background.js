@@ -1,5 +1,5 @@
 // Paste your Gemini AQ key here
-const GEMINI_API_KEY = "AQ.Ab8RN6JPXAB0QZmQx2jux1DIQwLffb1HVUP7DmNICvvOMx20EA"; 
+const GEMINI_API_KEY = "AQ.Ab8RN6KPBQUkd_yyYZmYT3fh2nbHFpaA1puzoorN4VnwlctgOw"; 
 
 // Global state variables (Declared only once)
 let actionHistory = [];
@@ -343,12 +343,14 @@ async function getModelDecision(dataUrl, didLastActionFail = false) {
 
   try {
     // Keep using the correct 3.1 model!
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent`;
+    // Append ?key= to the URL query string
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
+
     const response = await fetch(url, {
       method: "POST",
       headers: { 
-        "Content-Type": "application/json",
-        "x-goog-api-key": GEMINI_API_KEY
+        "Content-Type": "application/json"
+        // REMOVE "x-goog-api-key" from headers
       },
       body: JSON.stringify(payload)
     });
@@ -432,12 +434,14 @@ async function getAchievementSummary(objective, history) {
   };
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent`;
+    // Append ?key= to the URL query string
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
+
     const response = await fetch(url, {
       method: "POST",
       headers: { 
-        "Content-Type": "application/json",
-        "x-goog-api-key": GEMINI_API_KEY
+        "Content-Type": "application/json"
+        // REMOVE "x-goog-api-key" from headers
       },
       body: JSON.stringify(payload)
     });
