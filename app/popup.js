@@ -1,10 +1,13 @@
 const chatContainer = document.getElementById("chatContainer");
 const objectiveInput = document.getElementById("objectiveInput");
 const startButton = document.getElementById("startButton");
+const stopButton = document.getElementById("stop-btn");
 const micButton = document.getElementById("micButton");
 const authButton = document.getElementById("authButton");
 const userName = document.getElementById("userName");
 const userAvatar = document.getElementById("userAvatar");
+const agentStateContainer = document.getElementById("agent-state-container");
+const idleStateContainer = document.getElementById("idle-state-container");
 
 let currentUser = null;
 
@@ -19,6 +22,8 @@ chrome.storage.local.get(["googleUser", "chatHistory"], (data) => {
     });
   }
 });
+
+
 // Google Sign-In / Sign-Out Handler
 authButton.addEventListener("click", () => {
   if (currentUser) {
@@ -32,7 +37,7 @@ authButton.addEventListener("click", () => {
     // Sign In via Chrome Identity API
     chrome.identity.getAuthToken({ interactive: true }, (token) => {
       if (chrome.runtime.lastError || !token) {
-        console.error("Authentication Error:", chrome.runtime.lastError);
+        console.error("Authentication Error:", chrome.runtime.lastError?.message || "No token received and no specific error message.");
         return;
       }
 
@@ -71,11 +76,22 @@ function updateUserUI(user) {
 
 // Helper to append messages to our visual chat window
 function addMessage(text, sender = "system") {
+  const senderName = {
+    user: "You",
+    agent: "Agent",
+    system: "System"
+  }[sender];
+
   const msgDiv = document.createElement("div");
-  msgDiv.classList.add("message", sender);
-  msgDiv.textContent = text;
-  chatContainer.appendChild(msgDiv);
+  msgDiv.classList.add("message-bubble", `sender-${sender}`);
   
+  const senderTag = document.createElement("div");
+  senderTag.classList.add("sender-tag");
+  senderTag.textContent = senderName;
+
+  msgDiv.innerHTML = `<div class="sender-tag">${senderName}</div><div class="message-text">${text}</div>`;
+  chatContainer.appendChild(msgDiv);
+
   // Smoothly scroll down as messages arrive
   chatContainer.scrollTop = chatContainer.scrollHeight;
 }
@@ -84,6 +100,19 @@ function addMessage(text, sender = "system") {
 let currentStep = 0;
 const maxSteps = 15;
 
+function setAgentState(isRunning) {
+  if (isRunning) {
+    agentStateContainer.style.display = 'block';
+    idleStateContainer.style.display = 'none';
+    stopButton.style.display = 'inline-block';
+  } else {
+    agentStateContainer.style.display = 'none';
+    idleStateContainer.style.display = 'flex';
+    stopButton.style.display = 'none';
+    startButton.disabled = false;
+    objectiveInput.disabled = false;
+  }
+}
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "agent_log") {
     const logText = message.text;
@@ -91,6 +120,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // 1. Update the Header Status inside the dropdown
     const stepMatch = logText.match(/Step (\d+) of (\d+)/);
     const statusText = document.getElementById("logs-status-text");
+    const agentStatusText = document.getElementById("agent-status-text");
     const indicator = document.querySelector(".status-indicator");
 
     if (stepMatch) {
@@ -100,17 +130,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         indicator.classList.add("active");
         indicator.classList.remove("finished");
       }
+      if (agentStatusText) agentStatusText.innerText = `Working... (Step ${currentStep}/${maxSteps})`;
     } else if (logText.includes("🤖 Screenshot captured")) {
       if (statusText) statusText.innerText = `Analyzing screenshot (Step ${currentStep})...`;
+      if (agentStatusText) agentStatusText.innerText = `Analyzing... (Step ${currentStep})`;
     }
 
     // 2. Insert the raw logs STRICTLY inside the dropdown content container
     const logPanel = document.getElementById("log-panel");
     if (logPanel) {
+      let icon = '➡️';
+      if (logText.toLowerCase().includes('click')) icon = '🖱️';
+      if (logText.toLowerCase().includes('type')) icon = '⌨️';
+      if (logText.toLowerCase().includes('scroll')) icon = '↕️';
+      if (logText.toLowerCase().includes('navigating')) icon = '🌐';
+      if (logText.toLowerCase().includes('analyzing')) icon = '🧠';
+      if (logText.toLowerCase().includes('error') || logText.toLowerCase().includes('failed')) icon = '❌';
+      if (logText.toLowerCase().includes('stop')) icon = '🛑';
+
       const logLine = document.createElement("div");
+      logLine.className = "log-line";
       logLine.style.borderBottom = "1px solid rgba(255,255,255,0.03)";
-      logLine.style.paddingBottom = "4px";
-      logLine.innerText = logText;
+      logLine.innerHTML = `<span style="margin-right: 8px;">${icon}</span> ${logText}`;
       
       logPanel.appendChild(logLine);
       logPanel.scrollTop = logPanel.scrollHeight; // Auto-scroll inside the details box
@@ -120,15 +161,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Handle when the agent finishes
   if (message.action === "agent_finished") {
     const statusText = document.getElementById("logs-status-text");
+    const agentStatusText = document.getElementById("agent-status-text");
     const indicator = document.querySelector(".status-indicator");
     
     if (statusText) statusText.innerText = `Completed successfully!`;
+    if (agentStatusText) agentStatusText.innerText = `Finished!`;
     if (indicator) {
       indicator.classList.remove("active");
       indicator.classList.add("finished");
     }
-    startButton.disabled = false;
-    objectiveInput.disabled = false;
+    setAgentState(false);
   }
   if (message.action === "agent_achievement") {
     addMessage(message.text, "agent");
@@ -140,32 +182,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 startButton.addEventListener("click", () => {
   const objective = objectiveInput.value.trim();
   if (!objective) return;
-  // 1. Verify user is signed in first
-  chrome.identity.getAuthToken({ interactive: false }, (token) => {
-    if (chrome.runtime.lastError || !token) {
-      // Prompt user to sign in if token isn't active
-      alert("Please sign in with Google first before starting a prompt!");
-      return;
-    }
-    // Render & save user message
-    addMessage(objective, "user");
-    saveMessageToHistory("user", objective);
 
-    objectiveInput.value = "";
-    objectiveInput.style.height = "40px"; // Reset height
-    
-    // Disable controls while running
-    startButton.disabled = true;
-    objectiveInput.disabled = true;
-    
-    addMessage("⚡ Initializing agent loop...", "system");
-    saveMessageToHistory("system", "⚡ Initializing agent loop...");
+  // Verify user is signed in (optional but good practice)
+  // chrome.identity.getAuthToken({ interactive: false }, (token) => { ... });
 
-    // Broadcast to background.js to kick off the loop
-    chrome.runtime.sendMessage({
-      action: "start_agent_with_objective",
-      objective: objective
-    });
+  setAgentState(true); // Switch to "running" view
+
+  // Render & save user message
+  addMessage(objective, "user");
+  saveMessageToHistory("user", objective);
+
+  objectiveInput.value = "";
+  objectiveInput.style.height = "40px"; // Reset height
+  
+  saveMessageToHistory("system", "⚡ Initializing agent loop...");
+
+  // Broadcast to background.js to kick off the loop
+  chrome.runtime.sendMessage({
+    action: "start_agent_with_objective",
+    objective: objective
   });
 });
 
@@ -196,14 +231,14 @@ if (SpeechRecognition) {
 
   recognition.onstart = () => {
     isListening = true;
-    micButton.textContent = "🛑";
+    micButton.textContent = "■"; // Stop square
     micButton.style.backgroundColor = "#ef4444";
     objectiveInput.placeholder = "Listening...";
   };
 
   recognition.onend = () => {
     isListening = false;
-    micButton.textContent = "🎙️";
+    micButton.textContent = "🎙️"; // This one is generally well-supported, but could be "Mic"
     micButton.style.backgroundColor = "#161618";
     objectiveInput.placeholder = "Ask the agent to do something...";
   };
@@ -248,8 +283,10 @@ if (window.location.search.includes("requestMic=true")) {
 } else {
   micButton.style.display = "none"; // Fallback safety if API isn't supported
 }
-document.getElementById("stop-btn").addEventListener("click", () => {
+
+stopButton.addEventListener("click", () => {
   chrome.runtime.sendMessage({ action: "stop_agent" });
+  setAgentState(false);
 });
 // Function to save chat messages to chrome local storage
 function saveMessageToHistory(sender, text) {

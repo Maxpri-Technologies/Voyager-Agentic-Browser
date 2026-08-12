@@ -1,5 +1,5 @@
-// Paste your Gemini AQ key here
-const GEMINI_API_KEY = "AQ.Ab8RN6KPBQUkd_yyYZmYT3fh2nbHFpaA1puzoorN4VnwlctgOw"; 
+// Paste your Gemini API key here.
+const GEMINI_API_KEY = "AQ.Ab8RN6IQzYQUDvlYN6YN_8QgpBljcZ7f7UkDlYOXDmpkGE0Ckg";
 
 // Global state variables (Declared only once)
 let actionHistory = [];
@@ -26,9 +26,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     actionHistory = []; 
     agentMemory = ""; // Reset memory for the new run
     agentShouldStop = false; // Reset the stop flag for the new run
-    agentShouldStop = false; // Reset the stop flag for the new run
-    
-    // Find the active tab and start the async loop safely
+
     // Find the active tab and start the async loop safely
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];
@@ -69,7 +67,7 @@ async function runAgentLoop(initialTabId) {
     // DYNAMIC TRACKING: Check if active tab changed
     const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (activeTab && activeTab.id !== targetTabId) {
-      logToPanel(`🔄 Connected to active tab change: ${activeTab.id}`);
+      logToPanel(`Tab change: ${activeTab.id}`);
       targetTabId = activeTab.id;
     }
 
@@ -90,7 +88,7 @@ async function runAgentLoop(initialTabId) {
     // Take screenshot using window profile helper
     const screenshotData = await captureTab(targetTabId);
     if (!screenshotData || !screenshotData.success) {
-      logToPanel("⚠️ Failed capturing browser window. Retrying step...");
+      logToPanel("Please go to a proper website");
       await new Promise((resolve) => setTimeout(resolve, 1500));
       continue; 
     }
@@ -98,14 +96,14 @@ async function runAgentLoop(initialTabId) {
     // STATE VALIDATION: Check if the last action actually changed the page visually
     if (lastScreenshotDataUrl && lastScreenshotDataUrl === screenshotData.dataUrl) {
       executionFailedCount++;
-      logToPanel(`⚠️ State Change Warning: The page layout did not change after the last action. (Count: ${executionFailedCount})`);
+      logToPanel(`Working...`);
     } else {
       executionFailedCount = 0; // Reset counter if state successfully changed
     }
 
     lastScreenshotDataUrl = screenshotData.dataUrl; // Cache screenshot state
 
-    logToPanel("🤖 Screenshot captured. Processing with Gemini...");
+    logToPanel("Analyzing...");
     const action = await getModelDecision(screenshotData.dataUrl, executionFailedCount > 0);
     if (!action) {
       logToPanel("❌ API returned empty decision. Stopping loop.");
@@ -115,7 +113,7 @@ async function runAgentLoop(initialTabId) {
     // Save whatever notes or data Gemini wants to remember for the next step
     if (action.memory) {
       agentMemory = action.memory;
-      logToPanel(`🧠 Memory Scratchpad Updated: "${agentMemory}"`);
+      logToPanel(`Plotting...`);
     }
 
     // Define the execution block so we can easily retry it if no visual change occurs
@@ -129,23 +127,23 @@ async function runAgentLoop(initialTabId) {
         const cssX = Math.round((subAction.x / 1000) * cssWidth);
         const cssY = Math.round((subAction.y / 1000) * cssHeight);
 
-        logToPanel(`◤ Action: Scaled click (${subAction.x}, ${subAction.y}) to CSS (${cssX}, ${cssY})`);
+        logToPanel(`[Action] Clicking at (${cssX}, ${cssY})`);
         await chrome.tabs.sendMessage(targetTabId, { action: "execute_click", x: cssX, y: cssY });
       } 
       else if (subAction.type === "type") {
-        logToPanel(`⌨️ Action: Typing text: "${subAction.text}"`);
+        logToPanel(`[Action] Typing: "${subAction.text}"`);
         await chrome.tabs.sendMessage(targetTabId, { action: "execute_type", text: subAction.text }); 
       }
       else if (subAction.type === "enter") {
-        logToPanel(`⏎ Action: Simulating Enter key`);
+        logToPanel(`[Action] Pressing Enter`);
         await chrome.tabs.sendMessage(targetTabId, { action: "press_enter" });
       } 
       else if (subAction.type === "scroll") {
-        logToPanel(`📜 Action: Scrolling page ${subAction.direction}`);
+        logToPanel(`Scrolling page ${subAction.direction}`);
         await chrome.tabs.sendMessage(targetTabId, { action: "execute_scroll", direction: subAction.direction });
       }
       else if (subAction.type === "url") {
-        logToPanel(`🌐 Action: Navigating to: "${subAction.url}"`);
+        logToPanel(`Navigating to: "${subAction.url}"`);
         let targetUrl = subAction.url;
         if (!/^https?:\/\//i.test(targetUrl)) {
           targetUrl = `https://${targetUrl}`;
@@ -166,7 +164,7 @@ async function runAgentLoop(initialTabId) {
         if (retryableTypes.includes(subAction.type)) {
           const maxRetries = 3;
           for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            logToPanel(`⚡ Executing [${i + 1}/${action.actions.length}] ${subAction.type} (Attempt ${attempt}/${maxRetries})...`);
+            logToPanel(`Crunching numbers: [${i + 1}/${action.actions.length}] ${subAction.type} (Attempt ${attempt}/${maxRetries})...`);
             
             try {
               await executeSubAction(subAction);
@@ -180,7 +178,7 @@ async function runAgentLoop(initialTabId) {
             // Verify visual change
             const checkScreenshot = await captureTab(targetTabId);
             if (checkScreenshot && checkScreenshot.success && checkScreenshot.dataUrl !== lastScreenshotDataUrl) {
-              logToPanel(`✅ Visual change detected on attempt ${attempt}!`);
+              logToPanel(`Optimizing parameters...`);
               actionSuccess = true;
               lastScreenshotDataUrl = checkScreenshot.dataUrl; // Update cached state for the next sub-action
 
@@ -188,7 +186,7 @@ async function runAgentLoop(initialTabId) {
               actionHistory.push(`Step ${steps + 1}.${i + 1}: Successfully executed ${subAction.type}`);
               break;
             } else {
-              logToPanel(`❓ No visual change registered yet.`);
+              logToPanel(`Isolating the variables...`);
             }
           }
 
@@ -343,7 +341,7 @@ async function getModelDecision(dataUrl, didLastActionFail = false) {
 
   try {
     // Keep using the correct 3.1 model!
-    // Append ?key= to the URL query string
+    // Append ?key= to the URL query string. The key is now loaded from storage.
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
 
     const response = await fetch(url, {
@@ -410,9 +408,7 @@ function waitTillTabIsLoaded(tabId) {
 }
 // Generates a clean, one-sentence summary of the agent's achievements
 async function getAchievementSummary(objective, history) {
-  if (history.length === 0) {
-    return "The agent was started but did not execute any actions.";
-  }
+  
 
   const promptText = `
     You are summarizing your own actions as an autonomous web browser agent.
@@ -434,7 +430,7 @@ async function getAchievementSummary(objective, history) {
   };
 
   try {
-    // Append ?key= to the URL query string
+    // Append ?key= to the URL query string. The key is now loaded from storage.
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
 
     const response = await fetch(url, {
