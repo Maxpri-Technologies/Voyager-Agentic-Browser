@@ -1,0 +1,224 @@
+/* popup.css */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #121214;
+    color: #e4e4e7;
+    width: 380px;
+    margin: 0;
+    padding: 12px;
+    font-size: 14px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#userAvatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+#userName {
+    font-weight: 500;
+}
+
+.header-controls {
+    display: flex;
+    gap: 8px;
+}
+
+button {
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+#authButton {
+    background-color: #4f74d9;
+    color: white;
+}
+#authButton:hover { background-color: #405db1; }
+
+.icon-btn {
+    background: #2a2a2e;
+    color: #e4e4e7;
+    padding: 8px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.icon-btn:hover { background-color: #3a3a3e; }
+
+#settings-panel {
+    background-color: #1e1e20;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+#settings-panel h4 { margin-top: 0; }
+#settings-panel input {
+    width: calc(100% - 16px);
+    padding: 8px;
+    background: #2a2a2e;
+    border: 1px solid #3a3a3e;
+    border-radius: 4px;
+    color: white;
+    margin-top: 4px;
+    margin-bottom: 8px;
+}
+#save-api-key-btn {
+    background-color: #22c55e;
+    color: white;
+}
+#save-api-key-btn:hover { background-color: #16a34a; }
+
+#chatContainer {
+    height: 350px;
+    overflow-y: auto;
+    border: 1px solid #2a2a2e;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.message-bubble {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    line-height: 1.4;
+}
+.sender-tag {
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    opacity: 0.7;
+}
+.sender-user {
+    background-color: #4f74d9;
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+}
+.sender-agent {
+    background-color: #3a3a3e;
+    color: #e4e4e7;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+}
+.sender-system {
+    background-color: transparent;
+    color: #888;
+    font-style: italic;
+    font-size: 12px;
+    text-align: center;
+    align-self: center;
+    padding: 4px;
+}
+.sender-system .sender-tag { display: none; }
+
+
+#idle-state-container {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+#objectiveInput {
+    flex-grow: 1;
+    background-color: #2a2a2e;
+    color: #e4e4e7;
+    border: 1px solid #3a3a3e;
+    border-radius: 6px;
+    padding: 8px;
+    resize: none;
+    font-size: 14px;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+#startButton {
+    background-color: #22c55e;
+    color: white;
+    height: 38px;
+}
+#startButton:hover { background-color: #16a34a; }
+#startButton:disabled { background-color: #555; cursor: not-allowed; }
+
+#agent-state-container .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #1e1e20;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+#agent-status-text { font-weight: 500; }
+.stop-button {
+    background-color: #ef4444;
+    color: white;
+}
+.stop-button:hover { background-color: #dc2626; }
+
+.logs-details {
+    margin-top: 12px;
+    border: 1px solid #2a2a2e;
+    border-radius: 8px;
+}
+.logs-details summary {
+    padding: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.log-line {
+    padding: 4px 12px;
+    font-size: 12px;
+    color: #aaa;
+    border-bottom: 1px solid #2a2a2e;
+}
+#log-panel {
+    max-height: 200px;
+    overflow-y: auto;
+    background: #161618;
+}
+
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #555;
+}
+.status-indicator.active {
+    background-color: #facc15;
+    animation: pulse 1.5s infinite;
+}
+.status-indicator.finished {
+    background-color: #22c55e;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.5); }
+    70% { box-shadow: 0 0 0 8px rgba(250, 204, 21, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+}
