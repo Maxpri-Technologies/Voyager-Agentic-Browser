@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Voyager Agent</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside id="chat-sidebar" class="chat-sidebar">
+            <div class="sidebar-heading">
+                <div>
+                    <span class="eyebrow">Voyager</span>
+                    <h1>Chats</h1>
+                </div>
+                <div class="sidebar-actions">
+                    <button id="newChatButton" class="icon-btn" title="Start a new chat" aria-label="Start a new chat">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                    <button id="toggleSidebarButton" class="icon-btn" title="Collapse chats" aria-label="Collapse chats">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+                </div>
+            </div>
+            <button id="continueChatButton" class="continue-button" type="button">Continue this chat</button>
+            <div id="chatList" class="chat-list" aria-label="Your chats"></div>
+        </aside>
+
+        <main class="chat-workspace">
+            <div class="header">
+                <div class="user-profile">
+                    <img id="userAvatar" src="" alt="User Avatar" style="display: none;">
+                    <div>
+                        <span class="eyebrow">Active conversation</span>
+                        <span id="userName">Not signed in</span>
+                    </div>
+                </div>
+                <div class="header-controls">
+                    <button id="authButton">Sign In</button>
+                </div>
+            </div>
+
+            <div id="chatTitle" class="chat-title">New conversation</div>
+            <section id="agentTaskBoard" class="agent-task-board" hidden aria-live="polite" aria-label="Agent task progress">
+                <div class="agent-task-board-heading">
+                    <span class="eyebrow">Live plan</span>
+                    <span id="agentTaskSummary" class="agent-task-summary"></span>
+                </div>
+                <ol id="agentTaskList" class="agent-task-list"></ol>
+            </section>
+            <div id="chatContainer">
+                <div id="emptyChatState" class="empty-chat-state">
+                    <img class="empty-chat-logo" src="logo.png" alt="Voyager Agent">
+                    <p class="empty-title">Let's take it from here.</p>
+                    <div class="suggested-prompts">
+                        <button class="prompt-chip" data-prompt="Search flights to Orlando, Florida on Expedia" type="button">
+                            <span class="chip-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg></span> Flight search
+                        </button>
+                        <button class="prompt-chip" data-prompt="Find a laptop on Amazon" type="button">
+                            <span class="chip-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></span> Shop Amazon
+                        </button>
+                        <button class="prompt-chip" data-prompt="Create one meeting notes document template" type="button">
+                            <span class="chip-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span> Meeting Notes Doc
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="agent-state-container" style="display: none;">
+                <div class="status-bar">
+                    <span id="agent-status-text">Initializing...</span>
+                    <button id="stop-btn" class="stop-button">Stop Agent</button>
+                </div>
+            </div>
+
+            <div id="idle-state-container" class="chat-input-container">
+                <textarea id="objectiveInput" placeholder="Automate a task..." rows="1"></textarea>
+                <div class="chat-input-actions">
+                    <button id="micButton" class="icon-btn" title="Use voice input" aria-label="Use voice input" type="button">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                    </button>
+                    <button id="startButton" title="Send message" aria-label="Send message" type="button">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <details class="logs-details">
+                <summary>
+                    <div class="status-indicator"></div>
+                    <span id="logs-status-text">Agent Logs</span>
+                </summary>
+                <div id="log-panel"></div>
+            </details>
+
+            <details class="logs-details learned-details" id="userMemoryDetails">
+                <summary>
+                    <span class="memory-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3z"/></svg></span>
+                    <span id="user-memory-status-text">Memory (0)</span>
+                    <button id="clearUserMemoryBtn" class="clear-memory-btn" title="Clear user memory" type="button">Clear</button>
+                </summary>
+                <div class="learned-panel">
+                    <p class="memory-description">Your profile and preferences. Only use information you want Voyager to remember.</p>
+                    <form id="userMemoryForm" class="memory-form">
+                        <input id="userMemoryKey" type="text" maxlength="80" placeholder="e.g. Name" aria-label="Memory label" required>
+                        <input id="userMemoryValue" type="text" maxlength="300" placeholder="e.g. Alex" aria-label="Memory value" required>
+                        <button type="submit" class="memory-save-btn">Save</button>
+                    </form>
+                    <div id="user-memory-panel" class="user-memory-panel"></div>
+                </div>
+            </details>
+        </main>
+    </div>
+
+    <script src="knowledge-base.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>
