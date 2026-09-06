@@ -38,7 +38,9 @@ Intelligent Search & Query Optimization
 Filters, Sorting, & Commerce
 - Never scroll blindly through dozens of pages if sorting or filtering controls exist.
 - When looking for the lowest price or best reviews, use the site's "Sort by: Price low to high", "Sort by: Customer Reviews", or price filter sliders/checkboxes first.
-- When adding multiple items to a cart, handle them one by one. Search -> Select item -> Click Add to Cart -> Verify cart counter incremented -> Move to next item.
+- Distinguish product count from quantity: "one desk lamp, quantity 2" is one product with two units, not two different lamps. Keep the selected product identity (title, seller, price, and URL) fixed while changing its color/variant and quantity.
+- For one product with a requested quantity, search once, select the exact product and required variant, set the product-page quantity control to the requested number, click Add to Cart once, and verify the cart has one line item with that quantity. Never search for or add a second product to satisfy quantity.
+- When adding multiple distinct products to a cart, handle them one by one. Search -> Select item -> Click Add to Cart -> Verify the matching cart line -> Move to the next product.
 - Reaching checkout or payment is a handoff point. Do not submit payment or finalize purchases unless explicitly asked.
 
 Form Interaction & Dropdowns
@@ -115,8 +117,11 @@ Safety and consent
     const item = itemMatch?.[1]?.trim() || "the requested item";
     const budgetMatch = request.match(/\b(?:under|below|less than|up to|within)\s+\$?([\d,]+(?:\.\d{1,2})?)/i);
     const budget = budgetMatch ? `$${budgetMatch[1]}` : null;
+    const quantityMatch = request.match(/\b(?:quantity|qty|amount|number\s+of)\s*(?:(?:to|of|x)\s*)?(\d+)\b|\b(?:buy|get|add)\s+(\d+)\b/i);
+    const quantity = quantityMatch ? Number(quantityMatch[1] || quantityMatch[2]) : null;
     const isSearchTask = /\b(find|search|look\s+for|shop|get|buy|purchase|order|compare)\b/i.test(request);
     const isCartTask = /\b(get|buy|purchase|add|order)\b/i.test(request) && /\b(cart|amazon|online|website|store)\b/i.test(request);
+    const hasSingleProductQuantity = Boolean(quantity && quantity > 1 && /\b(?:a|an|one|single)\b/i.test(request));
 
     if (isSearchTask) {
       const tasks = [
@@ -124,8 +129,13 @@ Safety and consent
         { id: "search", title: `Search for ${item}`, status: "planned" }
       ];
       if (isCartTask) {
-        tasks.push({ id: "item-by-item", title: "Process each requested item separately", status: "planned" });
-        tasks.push({ id: "verify-cart", title: "Verify every requested item is in the cart", status: "planned" });
+        if (hasSingleProductQuantity) {
+          tasks.push({ id: "configure-item", title: `Select the exact variant and set quantity to ${quantity}`, status: "planned" });
+          tasks.push({ id: "verify-cart", title: "Verify one matching cart line has the requested quantity", status: "planned" });
+        } else {
+          tasks.push({ id: "item-by-item", title: "Process each distinct product separately", status: "planned" });
+          tasks.push({ id: "verify-cart", title: "Verify every requested product is in the cart", status: "planned" });
+        }
       }
       if (budget) tasks.push({ id: "filter-budget", title: `Filter results to ${budget} or less`, status: "planned" });
       if (!isCartTask) tasks.push({ id: "review-results", title: "Review matching results and verify key details", status: "planned" });
