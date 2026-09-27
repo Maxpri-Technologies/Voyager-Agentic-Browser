@@ -101,6 +101,17 @@ Safety and consent
 - Use direct Google Drive and Docs actions when available. Create clear names, preserve requested wording, and verify the created item and destination.
 - For organization, avoid duplicate folders/files when a matching target is already visible. Do not move, overwrite, share, or delete existing content without clear consent.
 [/FILES AND DOCUMENTS]`
+    },
+    {
+      match: /calendar|event|appointment|meeting|schedule|attendee|invite/i,
+      text: `
+[CALENDAR AND SCHEDULING]
+- Treat an open menu as a state change, not a failed click. If Create opens choices such as Event, Task, or Appointment, stop clicking Create and select the exact type requested by the user.
+- Map request semantics to the correct fields: in "meeting with Daniel Aronbabu" or "with daniel.aronbabu@gmail.com", Daniel is an attendee and must be entered through Add guests. Never put an attendee name or email in the title field. If no title is explicitly provided, a clear title such as "Meeting with Daniel Aronbabu" is acceptable, but it does not replace adding the guest.
+- Extract every explicit event field before acting: title, date, start time, end time or duration, timezone, location or meeting link, description, and attendees. Do not invent missing consequential details such as a date or time. If the request asks for a video/online/Google Meet meeting, use Add Google Meet video conferencing; otherwise do not claim a Meet link was created.
+- Fill the requested fields in the selected event form, add every requested person through Add guests, and save/create once. Verify the saved event visibly shows the requested title, date/time, and every requested attendee before claiming success.
+- If a required requested field is missing, ambiguous, or cannot be verified, stop at a safe handoff and report the incomplete field. Never claim an event was scheduled from the presence of a draft or a click alone.
+[/CALENDAR AND SCHEDULING]`
     }
   ];
 
@@ -122,6 +133,7 @@ Safety and consent
     const isSearchTask = /\b(find|search|look\s+for|shop|get|buy|purchase|order|compare)\b/i.test(request);
     const isCartTask = /\b(get|buy|purchase|add|order)\b/i.test(request) && /\b(cart|amazon|online|website|store)\b/i.test(request);
     const hasSingleProductQuantity = Boolean(quantity && quantity > 1 && /\b(?:a|an|one|single)\b/i.test(request));
+    const isCalendarTask = /\b(calendar|event|appointment|meeting|schedule|scheduled|attendee|invite)\b/i.test(request);
 
     if (isSearchTask) {
       const tasks = [
@@ -130,7 +142,10 @@ Safety and consent
       ];
       if (isCartTask) {
         if (hasSingleProductQuantity) {
-          tasks.push({ id: "configure-item", title: `Select the exact variant and set quantity to ${quantity}`, status: "planned" });
+          tasks.push({ id: "select-product", title: "Select one matching product", status: "planned" });
+          tasks.push({ id: "select-variant", title: "Select the requested product variant", status: "planned" });
+          tasks.push({ id: "set-quantity", title: `Set the product quantity to ${quantity}`, status: "planned" });
+          tasks.push({ id: "add-to-cart", title: "Add the selected product once", status: "planned" });
           tasks.push({ id: "verify-cart", title: "Verify one matching cart line has the requested quantity", status: "planned" });
         } else {
           tasks.push({ id: "item-by-item", title: "Process each distinct product separately", status: "planned" });
@@ -140,6 +155,19 @@ Safety and consent
       if (budget) tasks.push({ id: "filter-budget", title: `Filter results to ${budget} or less`, status: "planned" });
       if (!isCartTask) tasks.push({ id: "review-results", title: "Review matching results and verify key details", status: "planned" });
       return tasks;
+    }
+
+    if (isCalendarTask) {
+      return [
+        { id: "open-calendar", title: "Open the relevant calendar", status: "in_progress" },
+        { id: "open-create-menu", title: "Open the create menu", status: "planned" },
+        { id: "choose-type", title: "Choose the requested calendar item type", status: "planned" },
+        { id: "enter-title", title: "Enter the event title", status: "planned" },
+        { id: "set-date-time", title: "Set the requested date and time", status: "planned" },
+        { id: "add-attendees", title: "Add every requested attendee", status: "planned" },
+        { id: "save-event", title: "Save the completed event", status: "planned" },
+        { id: "verify-event", title: "Verify the saved event details", status: "planned" }
+      ];
     }
 
     return [

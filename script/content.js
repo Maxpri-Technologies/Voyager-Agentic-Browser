@@ -295,12 +295,14 @@ function simulateHoverAtCoordinates(x, y) {
 }
 
 function simulateSelectOption(optionValueOrText) {
+  const needle = String(optionValueOrText || "").trim().toLowerCase();
   const activeElement = document.activeElement;
+
   if (activeElement && activeElement.tagName === "SELECT") {
     let matchedIndex = -1;
     for (let i = 0; i < activeElement.options.length; i++) {
       const opt = activeElement.options[i];
-      if (opt.value.toLowerCase() === optionValueOrText.toLowerCase() || opt.text.toLowerCase().includes(optionValueOrText.toLowerCase())) {
+      if (opt.value.toLowerCase() === needle || opt.text.toLowerCase().includes(needle)) {
         matchedIndex = i;
         break;
       }
@@ -312,6 +314,40 @@ function simulateSelectOption(optionValueOrText) {
       return true;
     }
   }
+
+  const suggestionCandidates = Array.from(document.querySelectorAll('[role="option"], [role="listbox"], [role="menuitem"], li, div, [data-suggestion-index], .suggestion, .option, .autocomplete-option, .ui-menu-item'));
+  let bestMatch = null;
+  let bestScore = -Infinity;
+
+  for (const candidate of suggestionCandidates) {
+    if (!candidate || candidate.hidden || candidate.getAttribute('aria-hidden') === 'true') continue;
+
+    const rect = candidate.getBoundingClientRect();
+    if (!rect || rect.width < 10 || rect.height < 10) continue;
+
+    const text = (candidate.innerText || candidate.textContent || candidate.getAttribute('aria-label') || "").replace(/\s+/g, " ").trim();
+    if (!text) continue;
+
+    const lowerText = text.toLowerCase();
+    const startsWithScore = lowerText.startsWith(needle) ? 100 : 0;
+    const includesScore = lowerText.includes(needle) ? 40 : 0;
+    const score = startsWithScore + includesScore + (rect.width * 0.01);
+
+    if (score > bestScore && (needle === "" || lowerText.includes(needle) || lowerText.startsWith(needle))) {
+      bestMatch = candidate;
+      bestScore = score;
+    }
+  }
+
+  if (bestMatch) {
+    bestMatch.focus?.();
+    bestMatch.click?.();
+    bestMatch.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    bestMatch.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true }));
+    bestMatch.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    return true;
+  }
+
   return false;
 }
 
@@ -364,18 +400,16 @@ function simulateType(text) {
   if (!activeElement) return false;
 
   if (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA" || activeElement.isContentEditable) {
+    const currentValue = activeElement.isContentEditable
+      ? activeElement.innerText || ""
+      : activeElement.value || "";
+
     if (activeElement.isContentEditable) {
-      activeElement.innerText = ""; 
+      activeElement.innerText = currentValue ? `${currentValue}${text}` : text;
     } else {
-      activeElement.value = ""; 
+      activeElement.value = currentValue ? `${currentValue}${text}` : text;
     }
-    
-    if (activeElement.isContentEditable) {
-      activeElement.innerText = text;
-    } else {
-      activeElement.value = text;
-    }
-    
+
     activeElement.dispatchEvent(new Event("input", { bubbles: true }));
     activeElement.dispatchEvent(new Event("change", { bubbles: true }));
     return true;

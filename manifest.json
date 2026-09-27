@@ -21,7 +21,12 @@
       "https://www.googleapis.com/auth/generative-language.retriever",
       "https://www.googleapis.com/auth/documents",
       "https://www.googleapis.com/auth/drive",
-      "https://www.googleapis.com/auth/drive.file"
+      "https://www.googleapis.com/auth/drive.file",
+      "https://www.googleapis.com/auth/gmail.readonly",
+      "https://www.googleapis.com/auth/gmail.compose",
+      "https://www.googleapis.com/auth/gmail.modify",
+      "https://www.googleapis.com/auth/calendar",
+      "https://www.googleapis.com/auth/calendar.events"
     ]
   },
   "host_permissions": [
@@ -32,28 +37,28 @@
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "script/background.js"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "js": ["script/content.js"]
     }
   ],
   "icons": {
-    "16": "icon16.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
+    "16": "favicons/icon16.png",
+    "48": "favicons/icon48.png",
+    "128": "favicons/icon128.png"
   },
   "action": {
     "default_title": "Open Agent Sidebar",
     "default_icon": {
-      "16": "icon16.png",
-      "48": "icon48.png",
-      "128": "icon128.png"
+      "16": "favicons/icon16.png",
+      "48": "favicons/icon48.png",
+      "128": "favicons/icon128.png"
     }
   },
   "side_panel": {
-    "default_path": "popup.html"
+    "default_path": "index.html"
   }
 }
