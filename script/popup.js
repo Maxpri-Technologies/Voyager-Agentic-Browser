@@ -5,6 +5,8 @@ const stopButton = document.getElementById("stop-btn");
 const micButton = document.getElementById("micButton");
 const emptyChatState = document.getElementById("emptyChatState");
 const authButton = document.getElementById("authButton");
+const authCardScreen = document.getElementById("authCardScreen");
+const authCardSignIn = document.getElementById("authCardSignIn");
 const userName = document.getElementById("userName");
 const userAvatar = document.getElementById("userAvatar");
 const agentStateContainer = document.getElementById("agent-state-container");
@@ -30,6 +32,12 @@ let googleAccessToken = null;
 let chats = [];
 let activeChatId = null;
 let continueCurrentChat = true;
+
+function hideTaskBoard() {
+  agentTaskList.replaceChildren();
+  agentTaskBoard.hidden = true;
+  agentTaskSummary.textContent = "";
+}
 
 function renderAgentTaskList(tasks) {
   const taskItems = Array.isArray(tasks) ? tasks : [];
@@ -85,7 +93,12 @@ const GOOGLE_AUTH_SCOPES = [
   "https://www.googleapis.com/auth/generative-language.retriever",
   "https://www.googleapis.com/auth/documents",
   "https://www.googleapis.com/auth/drive",
-  "https://www.googleapis.com/auth/drive.file"
+  "https://www.googleapis.com/auth/drive.file",
+  "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/gmail.compose",
+  "https://www.googleapis.com/auth/gmail.modify",
+  "https://www.googleapis.com/auth/calendar",
+  "https://www.googleapis.com/auth/calendar.events"
 ];
 
 function requestFreshGoogleAccessToken() {
@@ -113,12 +126,21 @@ function createChat(title = "New conversation", messages = []) {
   };
 }
 
+function getChatsStorageKey(user = currentUser) {
+  if (user && (user.id || user.email)) {
+    const accountId = (user.id || user.email || "guest").toString().trim();
+    return `voyager_chats_${accountId}`;
+  }
+  return "voyager_chats_guest";
+}
+
 function activeChat() {
   return chats.find(chat => chat.id === activeChatId);
 }
 
 function persistChats() {
-  chrome.storage.local.set({ chats, activeChatId });
+  const storageKey = getChatsStorageKey();
+  chrome.storage.local.set({ [storageKey]: chats, activeChatId });
 }
 
 function renderChatList() {
@@ -175,9 +197,11 @@ function renderMessage(text, sender = "system") {
   messageText.textContent = text;
   msgDiv.append(senderTag, messageText);
   chatContainer.appendChild(msgDiv);
+  return msgDiv;
 }
 
 function renderActiveChat() {
+  hideTaskBoard();
   const chat = activeChat();
   chatContainer.innerHTML = "";
   chatTitle.textContent = chat ? chat.title : "New conversation";
@@ -228,25 +252,63 @@ function startNewChat() {
   objectiveInput.focus();
 }
 
+function shouldSkipGoogleLandingPageForObjective(objective) {
+  const text = String(objective || "");
+
+  const meetingCalendarSignal = /scedule|schedul|schedule|calendar|event|appointment|meeting|invite/i.test(text);
+  const directGoogleApiIntent = /gmail|google\s+mail|mailbox|inbox|read\s+my\s+emails?|check\s+my\s+emails?|show\s+my\s+emails?|draft\s+(?:an\s+)?email|compose\s+email|write\s+email|send\s+(?:an\s+)?email|create\s+(?:a\s+)?draft|email\s+to\s+[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|check\s+my\s+mail|show\s+my\s+mail|read\s+my\s+mail|email\s+inbox/i.test(text);
+  const directGoogleWorkspaceIntent = /google\s+doc(?:ument)?s?|create\s+(?:a\s+)?doc(?:ument)?|google\s+drive|drive\s+folder|drive\s+file|create\s+(?:a\s+)?folder|list\s+my\s+drive/i.test(text);
+
+  return meetingCalendarSignal || directGoogleApiIntent || directGoogleWorkspaceIntent;
+}
+
+async function navigateToGoogleForFirstMessageIfNeeded(objective = "") {
+  if (shouldSkipGoogleLandingPageForObjective(objective)) return;
+
+  const chat = activeChat();
+  if (!chat || chat.messages.length > 0) return;
+
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return;
+
+  await chrome.tabs.update(tab.id, { url: "https://www.google.com" });
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+}
+
 // Load existing user session and migrate the previous flat history into one chat.
-chrome.storage.local.get(["googleUser", "chatHistory", "chats", "activeChatId", "agentTaskList"], (data) => {
-  if (data.googleUser) {
-    updateUserUI(data.googleUser);
-  }
-  if (Array.isArray(data.chats) && data.chats.length) {
-    chats = data.chats;
-    activeChatId = data.activeChatId || chats[0].id;
+chrome.storage.local.get(["googleUser", "chatHistory", "chatHistoryGuest", "chats", "activeChatId", "agentTaskList"], (data) => {
+  const savedUser = data.googleUser || null;
+  if (savedUser) {
+    updateUserUI(savedUser);
   } else {
-    const legacyMessages = Array.isArray(data.chatHistory) ? data.chatHistory : [];
-    const migratedChat = createChat(legacyMessages[0]?.text?.slice(0, 42) || "New conversation", legacyMessages);
-    chats = [migratedChat];
-    activeChatId = migratedChat.id;
-    persistChats();
+    updateUserUI(null);
   }
-  renderActiveChat();
-  renderAgentTaskList(data.agentTaskList);
-  chrome.runtime.sendMessage({ action: "get_agent_task_list" }, (response) => {
-    if (!chrome.runtime.lastError) renderAgentTaskList(response?.tasks);
+
+  const accountKey = getChatsStorageKey(savedUser || currentUser);
+  chrome.storage.local.get([accountKey, "chats", "activeChatId"], (accountData) => {
+    const storedForAccount = Array.isArray(accountData[accountKey]) ? accountData[accountKey] : [];
+    const storedLegacy = Array.isArray(accountData.chats) ? accountData.chats : [];
+
+    if (storedForAccount.length) {
+      chats = storedForAccount;
+      activeChatId = accountData.activeChatId || chats[0].id;
+    } else if (storedLegacy.length) {
+      chats = storedLegacy;
+      activeChatId = accountData.activeChatId || chats[0].id;
+      persistChats();
+    } else {
+      const legacyMessages = Array.isArray(data.chatHistory) ? data.chatHistory : [];
+      const migratedChat = createChat(legacyMessages[0]?.text?.slice(0, 42) || "New conversation", legacyMessages);
+      chats = [migratedChat];
+      activeChatId = migratedChat.id;
+      persistChats();
+    }
+
+    renderActiveChat();
+    renderAgentTaskList(data.agentTaskList);
+    chrome.runtime.sendMessage({ action: "get_agent_task_list" }, (response) => {
+      if (!chrome.runtime.lastError) renderAgentTaskList(response?.tasks);
+    });
   });
 });
 
@@ -270,18 +332,8 @@ continueChatButton.addEventListener("click", () => {
 });
 
 
-// Google Sign-In / Sign-Out Handler
-authButton.addEventListener("click", () => {
-  if (currentUser) {
-    // Sign Out
-    chrome.identity.clearAllCachedAuthTokens(() => {
-      currentUser = null;
-      googleAccessToken = null;
-      chrome.storage.local.remove("googleUser");
-      updateUserUI(null);
-    });
-  } else {
-    // Sign In via Chrome Identity API
+function signInToGoogle() {
+  return new Promise((resolve) => {
     requestFreshGoogleAccessToken().then((token) => {
       const authError = chrome.runtime.lastError;
       if (authError || !token) {
@@ -296,12 +348,12 @@ authButton.addEventListener("click", () => {
         } else {
           console.error("Authentication Error:", errorMessage);
         }
+        resolve(false);
         return;
       }
 
       googleAccessToken = token;
 
-      // Fetch Profile Data using token
       fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -310,14 +362,46 @@ authButton.addEventListener("click", () => {
         currentUser = profile;
         chrome.storage.local.set({ googleUser: profile });
         updateUserUI(profile);
+        if (!chats.length) {
+          const chat = createChat();
+          chats = [chat];
+          activeChatId = chat.id;
+        }
+        persistChats();
+        renderActiveChat();
+        resolve(true);
       })
-      .catch(err => console.error("Profile Fetch Error:", err));
+      .catch(err => {
+        console.error("Profile Fetch Error:", err);
+        resolve(false);
+      });
     });
+  });
+}
+
+// Google Sign-In / Sign-Out Handler
+authButton.addEventListener("click", () => {
+  if (currentUser) {
+    chrome.identity.clearAllCachedAuthTokens(() => {
+      currentUser = null;
+      googleAccessToken = null;
+      chrome.storage.local.remove("googleUser");
+      updateUserUI(null);
+      persistChats();
+    });
+  } else {
+    signInToGoogle();
   }
 });
 
+if (authCardSignIn) {
+  authCardSignIn.addEventListener("click", () => signInToGoogle());
+}
+
 function updateUserUI(user) {
   currentUser = user;
+  const signedOut = !user;
+  document.body.classList.toggle("signed-out", signedOut);
   if (user) {
     userName.textContent = user.name || user.email;
     if (user.picture) {
@@ -326,11 +410,13 @@ function updateUserUI(user) {
     }
     authButton.textContent = "Sign Out";
     authButton.style.backgroundColor = "#ef4444";
+    authButton.title = "Sign out";
   } else {
     userName.textContent = "Not signed in";
     userAvatar.style.display = "none";
     authButton.textContent = "Sign In";
     authButton.style.backgroundColor = "#4f74d9";
+    authButton.title = "Sign in";
   }
 }
 
@@ -451,7 +537,7 @@ async function createDriveDoc() {
 // Append a message to the active chat and persist the complete transcript.
 function addMessage(text, sender = "system") {
   const chat = activeChat();
-  if (!chat) return;
+  if (!chat) return null;
   const message = { sender, text, timestamp: new Date().toISOString() };
   chat.messages.push(message);
   chat.updatedAt = message.timestamp;
@@ -459,10 +545,11 @@ function addMessage(text, sender = "system") {
     chat.title = text.slice(0, 42) || "New conversation";
   }
   emptyChatState.hidden = true;
-  renderMessage(text, sender);
+  const bubble = renderMessage(text, sender);
   chatContainer.scrollTop = chatContainer.scrollHeight;
   persistChats();
   renderChatList();
+  return bubble;
 }
 
 // Keep track of the step count locally
@@ -542,6 +629,68 @@ function sanitizeLogText(text) {
   return text.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "").trim();
 }
 
+function stripLogNoise(logText) {
+  return String(logText || "")
+    .replace(/^\[[^\]]+\]\s*/, "")
+    .replace(/\[(?:Action|Warning|Error|Stop|Summary|Learning|Task)\]\s*/gi, "")
+    .replace(/\s*\(Attempt \d+\/\d+\)/gi, "")
+    .replace(/\s*\(Step \d+\/\d+\)/gi, "")
+    .replace(/\s*\(\d+,\s*\d+\)/gi, "")
+    .replace(/\s*:\s*\"/g, ': "')
+    .trim();
+}
+
+function createCompactActionSummary(logText) {
+  const raw = stripLogNoise(logText);
+  const text = raw || "";
+  const lower = text.toLowerCase();
+
+  if (!text) return "";
+
+  if (lower.includes("click")) return "Clicking";
+
+  if (lower.includes("type") || lower.includes("typing")) {
+    const match = text.match(/(?:typing|type)\s*:?\s*["']?(.+?)["']?$/i);
+    const typed = match && match[1] ? match[1].trim() : text.replace(/^(?:typing|type)\s*:?\s*/i, "");
+    const compact = typed.replace(/\s+/g, " ").slice(0, 32);
+    return compact ? `Typing: "${compact}${compact.length >= 32 ? "…" : ""}"` : "Typing";
+  }
+
+  if (lower.includes("create") && (lower.includes("doc") || lower.includes("document"))) return "Creating a doc";
+  if (lower.includes("gmail") || (lower.includes("email") && lower.includes("draft")) || lower.includes("create email")) return "Creating an email";
+  if (lower.includes("create") && lower.includes("folder")) return "Creating a folder";
+  if (lower.includes("create") && lower.includes("file")) return "Creating a file";
+  if (lower.includes("drive") && lower.includes("read")) return "Reading a file";
+  if (lower.includes("inbox") || lower.includes("mail")) return "Checking email";
+  if (lower.includes("select")) return "Selecting";
+  if (lower.includes("hover")) return "Hovering";
+  if (lower.includes("scroll")) return "Scrolling";
+  if (lower.includes("navigate") || lower.includes("url")) return "Opening page";
+  if (lower.includes("search")) return "Searching";
+  if (lower.includes("submit") || lower.includes("enter")) return "Submitting";
+  if (lower.includes("analyzing") || lower.includes("screenshot") || lower.includes("reflecting") || lower.includes("learning")) return "Reviewing page";
+  if (lower.includes("ready for your confirmation") || lower.includes("finished") || lower.includes("summary")) return "Finished";
+
+  return text.slice(0, 40).replace(/\s+/g, " ");
+}
+
+function updateLatestAgentBubbleStatus(logText) {
+  const message = createCompactActionSummary(logText);
+  if (!message) return;
+
+  const bubble = document.querySelector(".message-bubble.sender-agent:last-of-type");
+  if (!bubble) return;
+
+  let statusRow = bubble.querySelector(".message-live-status");
+  if (!statusRow) {
+    statusRow = document.createElement("div");
+    statusRow.className = "message-live-status";
+    bubble.appendChild(statusRow);
+  }
+
+  statusRow.innerHTML = `${getLogIconSvg(logText)} <span>${sanitizeLogText(message)}</span>`;
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "agent_task_list") {
     renderAgentTaskList(message.tasks);
@@ -549,6 +698,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === "agent_log") {
     const logText = message.text;
+    updateLatestAgentBubbleStatus(logText);
 
     // 1. Update the Header Status inside the dropdown
     const stepMatch = logText.match(/Step (\d+) of (\d+)/);
@@ -556,7 +706,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const agentStatusText = document.getElementById("agent-status-text");
     const indicator = document.querySelector(".status-indicator");
 
-    if (stepMatch) {
+    if (logText.includes("Ready for your confirmation")) {
+      if (statusText) statusText.innerText = "Ready for your confirmation";
+      if (agentStatusText) agentStatusText.innerText = "Ready for confirmation";
+      if (indicator) {
+        indicator.classList.remove("active");
+        indicator.classList.add("finished");
+      }
+    } else if (logText.includes("did not produce a visible change") || logText.includes("Retry this step or tell me what to do next") || logText.includes("I could not read this page") || logText.includes("could not decide the next step")) {
+      if (statusText) statusText.innerText = "Need a recovery choice";
+      if (agentStatusText) agentStatusText.innerText = "Retry or continue manually";
+      if (indicator) {
+        indicator.classList.add("active");
+        indicator.classList.remove("finished");
+      }
+    } else if (stepMatch) {
       currentStep = parseInt(stepMatch[1]);
       if (statusText) statusText.innerText = `Working, ${currentStep}/${maxSteps}`;
       if (indicator) {
@@ -618,6 +782,20 @@ startButton.addEventListener("click", async () => {
     startNewChat();
   }
 
+  const chat = activeChat();
+  const isNewChat = !chat || chat.messages.length === 0;
+  if (isNewChat) {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab) {
+      await chrome.tabs.update(tab.id, { url: "https://www.google.com" });
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+    }
+  }
+
+  if (!shouldSkipGoogleLandingPageForObjective(objective)) {
+    await navigateToGoogleForFirstMessageIfNeeded(objective);
+  }
+
   // Render immediately so task progress is visible even before the service
   // worker sends its first state update.
   renderAgentTaskList(createInitialTaskBoard(objective));
@@ -628,8 +806,16 @@ startButton.addEventListener("click", async () => {
 
   objectiveInput.value = "";
   objectiveInput.style.height = "40px"; // Reset height
-  
-  addMessage("Initializing agent loop...", "system");
+
+  const activeStatusBubble = addMessage("Working...", "agent");
+  if (activeStatusBubble) {
+    const liveStatus = activeStatusBubble.querySelector(".message-live-status");
+    if (!liveStatus) {
+      const statusRow = document.createElement("div");
+      statusRow.className = "message-live-status";
+      activeStatusBubble.appendChild(statusRow);
+    }
+  }
 
   // Broadcast to background.js to kick off the loop
   chrome.runtime.sendMessage({
@@ -653,6 +839,13 @@ document.querySelectorAll(".prompt-chip[data-prompt]").forEach((promptButton) =>
 objectiveInput.addEventListener("input", function() {
   this.style.height = "auto";
   this.style.height = this.scrollHeight + "px";
+});
+
+objectiveInput.addEventListener("keydown", async (event) => {
+  if ((event.key === "Enter" && !event.shiftKey) || ((event.metaKey || event.ctrlKey) && event.key === "Enter")) {
+    event.preventDefault();
+    startButton.click();
+  }
 });
 
 // Support CMD/Ctrl + Enter to send and reset height

@@ -9,8 +9,8 @@
     <div class="app-shell">
         <aside id="chat-sidebar" class="chat-sidebar">
             <div class="sidebar-heading">
-                <div>
-                    <span class="eyebrow">Voyager</span>
+                <div class="sidebar-brand">
+                    <img src="logo.png" alt="Voyager logo" class="sidebar-logo">
                     <h1>Chats</h1>
                 </div>
                 <div class="sidebar-actions">
@@ -27,6 +27,17 @@
         </aside>
 
         <main class="chat-workspace">
+            <div id="authCardScreen" class="auth-card-screen" aria-live="polite">
+                <div class="auth-card">
+                    <img src="logo.png" alt="Voyager logo" class="auth-card-logo">
+                    <span class="eyebrow">Voyager</span>
+                    <h2>Sign in to sync your chats</h2>
+                    <p>Keep your conversations saved under your Google account and continue where you left off.</p>
+                    <div id="authCardButtonMount"></div>
+                    <small>Secure Google sign-in only</small>
+                </div>
+            </div>
+
             <div class="header">
                 <div class="user-profile">
                     <img id="userAvatar" src="" alt="User Avatar" style="display: none;">
@@ -69,7 +80,7 @@
             <div id="agent-state-container" style="display: none;">
                 <div class="status-bar">
                     <span id="agent-status-text">Initializing...</span>
-                    <button id="stop-btn" class="stop-button">Stop Agent</button>
+                    <button id="stop-btn" class="stop-button">▢</button>
                 </div>
             </div>
 
@@ -112,7 +123,8 @@
         </main>
     </div>
 
-    <script src="knowledge-base.js"></script>
-    <script src="popup.js"></script>
+    <script src="memory/knowledge-base.js"></script>
+    <script src="script/sign-in-button.js"></script>
+    <script src="script/popup.js"></script>
 </body>
 </html>
